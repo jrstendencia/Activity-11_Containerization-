@@ -1,0 +1,112 @@
+---
+
+### INSTALLATION OF DOCKER TO REMOTE SERVER  ###
+
+- hosts: all
+  become: true
+  pre_tasks:
+
+  - name: Install updates for Ubuntu
+    apt:
+      upgrade: dist
+      update_cache: yes
+    changed_when: false
+    when: ansible_distribution == "Ubuntu"
+
+- hosts: ubuntu_remoteServer
+  become: true
+
+  vars:
+    install_docker: true  # Define the variable with a value
+
+  tasks:
+
+  - name: Install aptitude
+    apt:
+      name: aptitude
+      state: latest
+      update_cache: true
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Installing required system packages/dependencies
+    apt:
+      pkg:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - software-properties-common
+        - python3-pip
+        - virtualenv
+        - python3-setuptools
+      state: latest
+      update_cache: true
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Add Docker GPG apt Key
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Add Docker Repository
+    apt_repository:
+      repo: deb https://download.docker.com/linux/ubuntu focal stable
+      state: present
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Update apt and install docker-ce
+    apt:
+      name: docker-ce
+      state: latest
+      update_cache: true
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Install Docker Module for Python
+    pip:
+      name: docker
+    when: ansible_distribution == "Ubuntu"
+
+### ENABLE DOCKER ###
+
+  - name: Enabling Docker
+    service:
+      name: docker
+      state: started
+    when: ansible_distribution == "Ubuntu"
+
+### ADDING DOCKER GROUP TO CURRENT USER ###
+
+  - name: Adding the Docker group to the current user
+    command: sudo usermod -a -G docker tendencia
+    when: ansible_distribution == "Ubuntu"
+
+### BUILDING DOCKER IMAGE (DOCKERFILE) ###
+
+  - name: Creating a build directory
+    file:
+      path: /root/dockerfile-dir
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Copy the Dockerfile
+    copy:
+      src: "{{ install_docker }}/Dockerfile"
+      dest: /root/dockerfile-dir/Dockerfile
+      owner: root
+      group: root
+      mode: '0644'
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Building container image
+    docker_image:
+      name: dockercontainer:1.0
+      build:
+        path: /root/dockerfile-dir
+        args:
+          listen_port: 8080
+      source: build
+      state: present
+    when: ansible_distribution == "Ubuntu"

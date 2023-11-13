@@ -1,0 +1,15 @@
+FROM ubuntu
+MAINTAINER tendencia  <qjrtendencia@tip.edu.ph>
+
+# To skip interactions
+ARG DEBIAN_FRONTEND=noninteractive
+
+# To update packages
+RUN apt update; apt dist-upgrade -y
+
+# Installation for web and DB servers
+RUN apt install -y apache2 
+RUN apt install -y mariadb-server
+
+# Setting the entrypoint
+ENTRYPOINT apache2ctl -D FOREGROUND
